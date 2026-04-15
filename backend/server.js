@@ -121,6 +121,8 @@ const configuredOrigins = [
 
 const allowedOrigins = new Set([...defaultFrontendOrigins, ...configuredOrigins]);
 
+console.log("[CORS] Allowed Origins:", Array.from(allowedOrigins));
+
 // CORS for browser clients using cookie-based auth from the frontend.
 app.use(
   cors({
