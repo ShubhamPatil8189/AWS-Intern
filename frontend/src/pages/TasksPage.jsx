@@ -9,7 +9,8 @@ import {
   HiOutlineTrash, 
   HiOutlinePencil, 
   HiOutlinePlus,
-  HiOutlineX
+  HiOutlineX,
+  HiOutlineCheckCircle
 } from "react-icons/hi";
 
 function TimeText({ time }) {
@@ -52,7 +53,7 @@ export default function TasksPage() {
     setLoading(true);
     try {
       const res = await api.get("/task/all");
-      setTasks(res.data.tasks || []);
+      setTasks((res.data.tasks || []).filter(t => !t.completed));
       setEvents(res.data.events || []);
     } catch (err) {
       console.error("Failed to fetch tasks/events", err);
@@ -132,6 +133,28 @@ export default function TasksPage() {
     }
   };
 
+  const handleMarkCompleted = async (item, isEvent) => {
+    try {
+      // Optimistically update UI by filtering out the item
+      if (isEvent) {
+        setEvents(prev => prev.filter(e => e.id !== item.id));
+      } else {
+        setTasks(prev => prev.filter(t => t.id !== item.id));
+      }
+      
+      await api.patch(`/task/${item.id}`, {
+        provider: item.source,
+        type: isEvent ? "event" : "task",
+        details: { completed: true }
+      });
+      // Optionally fetch data again, but optimistic update is usually enough
+      // fetchData();
+    } catch (err) {
+      alert("Failed to mark as completed: " + (err.response?.data?.error || err.message));
+      fetchData(); // revert
+    }
+  };
+
   const renderItem = (item, isEvent) => {
     const isGoogle = item.source === "gmail";
     const bgColors = isGoogle
@@ -161,6 +184,15 @@ export default function TasksPage() {
               </div>
               
               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                {!item.completed && !isEvent && (
+                  <button 
+                    onClick={() => handleMarkCompleted(item, isEvent)}
+                    className="p-1.5 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-md"
+                    title="Mark as completed"
+                  >
+                    <HiOutlineCheckCircle className="h-4 w-4" />
+                  </button>
+                )}
                 <button 
                   onClick={() => handleOpenEditModal(item, isEvent)}
                   className="p-1.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-md"

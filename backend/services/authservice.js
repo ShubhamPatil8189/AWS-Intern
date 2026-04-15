@@ -24,7 +24,7 @@ function setTokenCookie(res, token) {
   res.cookie("token", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // 'none' for cross-domain
     maxAge: days * MS_PER_DAY
   });
 }
@@ -33,7 +33,7 @@ function clearTokenCookie(res) {
   res.clearCookie("token", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict"
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax"
   });
 }
 
