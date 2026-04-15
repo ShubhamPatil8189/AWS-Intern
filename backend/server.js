@@ -109,6 +109,7 @@ const defaultFrontendOrigins = [
   "http://localhost:5173",
   "http://localhost:5174",
   "http://localhost:4173",
+  "https://unifiedbox.vercel.app",
 ];
 
 const configuredOrigins = [
@@ -116,12 +117,12 @@ const configuredOrigins = [
   ...(process.env.FRONTEND_URLS || "").split(","),
   ...(process.env.CORS_ORIGINS || "").split(","),
 ]
-  .map((origin) => String(origin || "").trim())
+  .map((origin) => String(origin || "").trim().replace(/\/$/, "")) // Remove trailing slashes
   .filter(Boolean);
 
-const allowedOrigins = new Set([...defaultFrontendOrigins, ...configuredOrigins]);
+const allowedOrigins = new Set([...defaultFrontendOrigins.map(o => o.replace(/\/$/, "")), ...configuredOrigins]);
 
-console.log("[CORS] Allowed Origins:", Array.from(allowedOrigins));
+console.log("[CORS] Initialized with Allowed Origins:", Array.from(allowedOrigins));
 
 // CORS for browser clients using cookie-based auth from the frontend.
 app.use(
@@ -132,10 +133,13 @@ app.use(
         return callback(null, true);
       }
 
-      if (allowedOrigins.has(origin)) {
+      const normalizedOrigin = String(origin).trim().replace(/\/$/, "");
+      
+      if (allowedOrigins.has(normalizedOrigin)) {
         return callback(null, true);
       }
 
+      console.warn(`[CORS] Request rejected. Origin: "${origin}" (normalized: "${normalizedOrigin}") is not in allowed list:`, Array.from(allowedOrigins));
       return callback(new Error("Not allowed by CORS"));
     },
     credentials: true,
