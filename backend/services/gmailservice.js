@@ -328,6 +328,7 @@ const gmailService = {
       await userService.saveTokens(user.id, tokens);
 
       // Fire and forget the initial fetch to prevent the redirect from hanging
+      console.log(`[OAuth] Backgrounding initial fetch and watch for user ${user.id}`);
       gmailService.fetchEmailsFromGmail(
         user.id,
         tokens.access_token,
@@ -336,28 +337,28 @@ const gmailService = {
       ).catch(err => console.error("[OAuth Background Fetch Error]", err));
 
       // Best effort: start watch automatically after OAuth completes.
-      let watchStatus = { started: false, error: null };
-      try {
-        const configuredTopic = process.env.GMAIL_PUBSUB_TOPIC;
-        const resolvedTopic = gmailService.resolveTopicName(configuredTopic);
+      // Moved to background to prevent redirect hang.
+      (async () => {
+        try {
+          const configuredTopic = process.env.GMAIL_PUBSUB_TOPIC;
+          const resolvedTopic = gmailService.resolveTopicName(configuredTopic);
 
-        if (resolvedTopic) {
-          const { gmail } = await gmailService.getGmailClientForUser(user.id);
-          await gmail.users.watch({
-            userId: "me",
-            requestBody: {
-              topicName: resolvedTopic,
-              labelIds: ["INBOX"],
-              labelFilterAction: "include"
-            }
-          });
-          watchStatus.started = true;
-        } else {
-          watchStatus.error = "GMAIL_PUBSUB_TOPIC is missing or invalid";
+          if (resolvedTopic) {
+            const { gmail } = await gmailService.getGmailClientForUser(user.id);
+            await gmail.users.watch({
+              userId: "me",
+              requestBody: {
+                topicName: resolvedTopic,
+                labelIds: ["INBOX"],
+                labelFilterAction: "include"
+              }
+            });
+            console.log(`[OAuth] Gmail watch started for ${user.id}`);
+          }
+        } catch (watchError) {
+          console.error(`[OAuth] Failed to start Gmail watch for ${user.id}:`, watchError.message);
         }
-      } catch (watchError) {
-        watchStatus.error = watchError.message || "Failed to start Gmail watch";
-      }
+      })();
 
       const jwtToken = jwt.sign(
         { userId: user.id },
@@ -368,20 +369,22 @@ const gmailService = {
       setTokenCookie(res, jwtToken);
 
       if (!requestWantsJson(req)) {
-        return res.redirect(buildFrontendUrl("/auth/google/callback", {
+        const finalUrl = buildFrontendUrl("/auth/google/callback", {
           userId: user.id,
           oauth: "success"
-        }));
+        });
+        console.log(`[OAuth] Redirecting user ${user.id} to: ${finalUrl}`);
+        return res.redirect(finalUrl);
       }
 
+      console.log(`[OAuth] Returning JSON for user ${user.id}`);
       return res.json({
         message: "Login successful",
         token: jwtToken,
         userId: user.id,
         emailsFetched: "Syncing in background",
         unreadSync: "Syncing in background",
-        prioritySync: "Syncing in background",
-        watch: watchStatus
+        prioritySync: "Syncing in background"
       });
     } catch (error) {
       if (!requestWantsJson(req)) {

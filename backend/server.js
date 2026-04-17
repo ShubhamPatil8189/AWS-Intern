@@ -188,7 +188,10 @@ app.get("/google/login", (req, res) => {
 app.get("/auth/outlook/callback", outlookService.oauthCallback);
 
 // Mount OAuth callback directly at /login/oauth2/code/google (as per .env REDIRECT_URI)
-app.use("/login/oauth2/code", gmailRoutes);
+app.use("/login/oauth2/code", (req, res, next) => {
+  console.log(`[OAuth Callback Request] ${req.method} ${req.originalUrl}`);
+  next();
+}, gmailRoutes);
 app.use("/login/oauth2/code", outlookRoutes);
 
 // Mount other Gmail routes
