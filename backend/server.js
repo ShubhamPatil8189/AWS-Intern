@@ -100,20 +100,21 @@ app.use(
   cors({
     origin: (origin, callback) => {
       // Allow non-browser clients (Postman/curl) with no Origin header.
-      if (!origin) {
-        return callback(null, true);
-      }
+      if (!origin) return callback(null, true);
 
-      const normalizedOrigin = String(origin).trim().replace(/\/$/, "");
+      const normalizedOrigin = origin.trim().replace(/\/$/, "");
+      const isAllowed = CORS_ORIGINS.some(allowed => 
+        allowed === normalizedOrigin || 
+        allowed === normalizedOrigin.replace(/^https?:\/\/(www\.)?/, "")
+      );
       
-      if (CORS_ORIGINS.some(o => o.replace(/\/$/, "") === normalizedOrigin)) {
+      if (isAllowed) {
         return callback(null, true);
       }
 
-      console.warn(`[CORS] Request rejected. Origin: "${origin}" is not in allowed list.`);
+      console.warn(`[CORS] Request rejected. Origin: "${origin}" is not in allowed list:`, CORS_ORIGINS);
       return callback(new Error("Not allowed by CORS"));
     },
-    credentials: true,
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: [

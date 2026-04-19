@@ -5,7 +5,7 @@
  */
 
 const normalizeEnv = (value) => {
-  return String(value || "").trim().replace(/^['\"]|['\"]$/g, "");
+  return String(value || "").trim().replace(/^['\"]|['\"]$/g, "").replace(/\/$/, "");
 };
 
 // --- Frontend URLs ---
@@ -71,4 +71,5 @@ console.log(`[Config] Initialized Core Configuration:`);
 console.log(`[Config] FRONTEND_URL: ${FRONTEND_URL}`);
 console.log(`[Config] GOOGLE_REDIRECT_URI: ${REDIRECT_URI}`);
 console.log(`[Config] OUTLOOK_REDIRECT_URI: ${OUTLOOK_REDIRECT_URI}`);
+console.log(`[Config] CORS_ORIGINS: [${CORS_ORIGINS.join(", ")}]`);
 console.log(`[Config] PORT: ${PORT}`);
